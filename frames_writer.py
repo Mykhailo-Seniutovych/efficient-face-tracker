@@ -1,4 +1,5 @@
 from typing import Protocol
+import time
 
 import cv2
 import numpy as np
@@ -13,7 +14,7 @@ class FramesWriter(Protocol):
     def flush_buffer(self):
         pass
 
-    def seek_backward(self, frames_offset: int):
+    def seek_backward(self, frames_offset: int) -> int:
         pass
 
 
@@ -45,15 +46,15 @@ class ImageFilesFramesWriter(FramesWriter):
             cv2.imwrite(f"{self.__output_dir}/{img_index}.jpg", self.__buffer[i])
         self.__frame_buffer_index = 0
 
-    def seek_backward(self, frames_offset: int):
+    def seek_backward(self, frames_offset: int) -> int:
         assert frames_offset >= 0
+        frames_offset = min(self.__frame_buffer_index - 1, frames_offset)
 
         self.__frame_buffer_index -= frames_offset
-        assert self.__frame_buffer_index >= -1
-        assert self.__frame_buffer_index < self.__buffer_size
 
         self.__frame_index -= frames_offset
         assert self.__frame_index >= -1
+        return frames_offset
 
 
 class VideoFramesWriter(FramesWriter):
@@ -83,15 +84,15 @@ class VideoFramesWriter(FramesWriter):
             self.__video.write(self.__buffer[i])
         self.__frame_buffer_index = 0
 
-    def seek_backward(self, frames_offset: int):
+    def seek_backward(self, frames_offset: int) -> int:
         assert frames_offset >= 0
+        frames_offset = min(self.__frame_buffer_index - 1, frames_offset)
 
         self.__frame_buffer_index -= frames_offset
-        assert self.__frame_buffer_index >= -1
-        assert self.__frame_buffer_index < self.__buffer_size
 
         self.__frame_index -= frames_offset
         assert self.__frame_index >= -1
+        return frames_offset
 
 
 class InteractiveFramesWriter(FramesWriter):
@@ -105,7 +106,9 @@ class InteractiveFramesWriter(FramesWriter):
 
     def write_frame(self, frame: cv2.typing.MatLike) -> bool:
         self.__frame_index += 1
-        cv2.imshow("Frame", InteractiveFramesWriter.__named_frame(frame, self.__frame_index))
+        if self.__frame_index < 530:
+            return True
+        cv2.imshow("Median", InteractiveFramesWriter.__named_frame(frame, self.__frame_index))
         key = cv2.waitKey(0) & 0xFF
         if key == ord("q"):
             return False
@@ -120,8 +123,11 @@ class InteractiveFramesWriter(FramesWriter):
     def flush_buffer(self):
         pass
 
-    def seek_backward(self, frames_offset: int):
-        pass
+    def seek_backward(self, frames_offset: int) -> int:
+        assert frames_offset >= 0
+        frames_offset = min(self.__frame_index - 1, frames_offset)
+        self.__frame_index -= frames_offset
+        return frames_offset
 
     def __named_frame(frame: cv2.typing.MatLike, number: int) -> cv2.typing.MatLike:
         named_frame = frame.copy()

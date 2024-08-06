@@ -3,6 +3,7 @@ import os
 from typing import Protocol
 from enum import Enum
 from collections import deque
+from dataclasses import dataclass
 
 import numpy as np
 import cv2
@@ -12,18 +13,50 @@ import face_detection
 from frames_reader import FramesReader
 from frames_writer import FramesWriter
 
-IS_PIXEL_MOVING_THRESHOLD = 30
-AMOUNT_OF_MOVING_PIXELS_THRESHOLD = 20
-AMOUNT_OF_MOVING_FRAMES_THRESHOLD = 2
 
-DETECTION_CONFIDENCE_THRESHOLD = 0.7
-DETECTOR = "DSFDDetector"
-DETECTION_FREQUENCY = 7
-MIN_FRAME_TO_FACE_SIZE_RATIO = 3.0
+@dataclass
+class Config:
+    is_pixel_moving_threshold: str = 30
+    """This value is used to determine if a difference between two pixels constitutes as movement"""
 
-ACTION_HIGHLIGHT_ENABLED = False
-REPORT_PROGRESS_INTERVAL = 100
-USE_BACKWARD_TRACKING = True
+    amount_of_moving_pixels_threshold: int = 20
+    """How many moving pixels should be on a given frame, to consider this frame as having movement"""
+
+    amount_of_moving_frames_threshold: int = 2
+    """
+    How many consecutive frames should have movement, to detect that the movement is currently happening on the video.
+    Used to reduce the noise, when the movement was detected only on one frame.
+    """
+
+    detection_confidence_threshold: float = 0.7
+    """The confidence threshold for face detector"""
+
+    detector_name = "DSFDDetector"
+    """The name of the detector to use, can be "DSFDDetector","RetinaNetResNet50", "RetinaNetMobileNetV1" """
+
+    detection_frequency: int = 7
+    """How often the detector should be run in terms of frames, for higher fps, videos this number should be larger"""
+
+    min_frame_to_face_size_ratio: float = 3.0
+    """
+    The DSFDDetector detector sometimes falsely detects very large bounding boxes. The face cannot be so large .
+    This value is used to filter out the bounding boxes when the ratio between frame area and bounding box is too large.
+    """
+
+    action_highlight_enabled: bool = False
+    """
+    Used to for debugging to mark each action on the frame 
+    (e.g., no movement detected, movement detected, detector runs, tracker runs)
+    """
+
+    report_progress_interval: int = 100
+    """The amount of frames to be processed to report progress to the console"""
+
+    use_backward_tracking: bool = True
+    """
+    When face is detected, we can track the frames not only forward in the video, 
+    but also go back in time before previous detection was run to ensure that we did not miss any frames. 
+    """
 
 
 class FrameColors:
@@ -34,17 +67,20 @@ class FrameColors:
 
 
 class FaceTracker:
-    def __init__(self, frames_reader: FramesReader, frames_writer: FramesWriter):
+    def __init__(self, cfg: Config, frames_reader: FramesReader, frames_writer: FramesWriter):
+        self.__cfg = cfg
         self.__frames_reader = frames_reader
         self.__frames_writer = frames_writer
         self.__moving_frames_count = 0
         self.__has_movement = False
         self.__detector = face_detection.build_detector(
-            DETECTOR, confidence_threshold=DETECTION_CONFIDENCE_THRESHOLD, nms_iou_threshold=0.3
+            self.__cfg.detector_name,
+            confidence_threshold=self.__cfg.detection_confidence_threshold,
+            nms_iou_threshold=0.3,
         )
         self.__frame_index = -1
         self.__prev_faces_tracked = False
-        self.__frame_buffer = deque(maxlen=DETECTION_FREQUENCY)
+        self.__frame_buffer = deque(maxlen=self.__cfg.detection_frequency)
 
     def execute(self):
         is_read, frame = self.__read_next_frame()
@@ -80,7 +116,7 @@ class FaceTracker:
                 if not is_written:
                     break
 
-            if self.__frame_index % REPORT_PROGRESS_INTERVAL == 0:
+            if self.__frame_index % self.__cfg.report_progress_interval == 0:
                 print(f"Processed {self.__frame_index}/{self.__frames_reader.frames_count} frames")
 
     def __read_next_frame(self) -> tuple[bool, cv2.typing.MatLike]:
@@ -92,17 +128,17 @@ class FaceTracker:
     def __check_movement(self, current_gray: cv2.typing.MatLike):
         diff = np.abs(np.float32(current_gray) - np.float32(self.__prev_gray))
         diff = np.uint8(diff)
-        ret, diff_clear = cv2.threshold(diff, IS_PIXEL_MOVING_THRESHOLD, 255, cv2.THRESH_BINARY)
+        ret, diff_clear = cv2.threshold(diff, self.__cfg.is_pixel_moving_threshold, 255, cv2.THRESH_BINARY)
         diff_clear = cv2.medianBlur(diff_clear, 3)
         amount_of_moving_pixels = len(diff_clear[diff_clear > 0])
-        frame_has_movement = amount_of_moving_pixels >= IS_PIXEL_MOVING_THRESHOLD
+        frame_has_movement = amount_of_moving_pixels >= self.__cfg.is_pixel_moving_threshold
         self.__moving_frames_count = self.__moving_frames_count + 1 if frame_has_movement else 0
-        self.__has_movement = self.__moving_frames_count >= AMOUNT_OF_MOVING_FRAMES_THRESHOLD
+        self.__has_movement = self.__moving_frames_count >= self.__cfg.amount_of_moving_pixels_threshold
 
     def __detect_faces(
         self, frame: cv2.typing.MatLike, output_frame: cv2.typing.MatLike
     ) -> list[tuple[int, int, int, int]]:
-        should_run_detector = self.__frame_index % DETECTION_FREQUENCY == 0
+        should_run_detector = self.__frame_index % self.__cfg.detection_frequency == 0
         if not should_run_detector:
             return []
 
@@ -115,7 +151,7 @@ class FaceTracker:
             frame_area = self.__frame_width * self.__frame_height
             size_ratio = frame_area / face_area
             # the model sometimes falsely detects unrealistically large areas on fisheye camera images, we should filter them out
-            if size_ratio > MIN_FRAME_TO_FACE_SIZE_RATIO:
+            if size_ratio > self.__cfg.min_frame_to_face_size_ratio:
                 result.append((x1, y1, x2, y2))
                 cv2.rectangle(output_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
@@ -137,7 +173,7 @@ class FaceTracker:
             return True
 
         # backward track
-        if USE_BACKWARD_TRACKING and not self.__prev_faces_tracked:
+        if self.__cfg.use_backward_tracking and not self.__prev_faces_tracked:
             trackers = []
             for face_bbox in detected_faces:
                 x1, y1, x2, y2 = face_bbox
@@ -146,9 +182,9 @@ class FaceTracker:
                 tracker.init(frame, (x, y, w, h))
                 trackers.append(tracker)
 
-            offset = self.__frames_writer.seek_backward(DETECTION_FREQUENCY)
+            offset = self.__frames_writer.seek_backward(self.__cfg.detection_frequency)
             prev_frames = []
-            for idx in range(DETECTION_FREQUENCY - offset, DETECTION_FREQUENCY - 1):
+            for idx in range(self.__cfg.detection_frequency - offset, self.__cfg.detection_frequency - 1):
                 prev_frames.append(self.__frame_buffer[idx])
 
             tracked_faces: list[list[tuple[float, float, float, float]]] = []
@@ -189,7 +225,7 @@ class FaceTracker:
             tracker.init(frame, (x, y, w, h))
             trackers.append(tracker)
 
-        for _ in range(DETECTION_FREQUENCY - 1):
+        for _ in range(self.__cfg.detection_frequency - 1):
             is_read, frame = self.__read_next_frame()
             if not is_read:
                 return False
@@ -217,5 +253,5 @@ class FaceTracker:
         return True
 
     def __highlight_frame(self, frame_bgr: cv2.typing.MatLike, color: FrameColors):
-        if ACTION_HIGHLIGHT_ENABLED:
+        if self.__cfg.action_highlight_enabled:
             cv2.rectangle(frame_bgr, (0, 0), (self.__frame_width, self.__frame_height), color, 10)

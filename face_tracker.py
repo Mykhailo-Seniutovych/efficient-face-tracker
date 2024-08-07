@@ -133,7 +133,7 @@ class FaceTracker:
         amount_of_moving_pixels = len(diff_clear[diff_clear > 0])
         frame_has_movement = amount_of_moving_pixels >= self.__cfg.is_pixel_moving_threshold
         self.__moving_frames_count = self.__moving_frames_count + 1 if frame_has_movement else 0
-        self.__has_movement = self.__moving_frames_count >= self.__cfg.amount_of_moving_pixels_threshold
+        self.__has_movement = self.__moving_frames_count >= self.__cfg.amount_of_moving_frames_threshold
 
     def __detect_faces(
         self, frame: cv2.typing.MatLike, output_frame: cv2.typing.MatLike

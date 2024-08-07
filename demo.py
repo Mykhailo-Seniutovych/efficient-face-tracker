@@ -7,14 +7,11 @@ from frames_writer import ImageFilesFramesWriter, VideoFramesWriter, Interactive
 from face_tracker import FaceTracker, Config
 
 frames_reader = ImageFilesFrameReader(images_dir="./data/test/scenario_5", start_image_index=0)
-frames_reader = VideoFramesReader(
-    video_path="data/public/videos/footage.mp4",
-    start_time_in_sec=0,
-)
+frames_reader = VideoFramesReader(video_path="data/public/videos/video1.mp4")
 
-frames_writer = ImageFilesFramesWriter(output_dir="./data/temp", buffer_size=50, img_size=(480, 640))
+# frames_writer = ImageFilesFramesWriter(output_dir="./data/temp", buffer_size=50, img_size=(640, 480))
 frames_writer = VideoFramesWriter(
-    video_path="data/public/videos/footage-out.mp4",
+    video_path="data/public/videos/video1-out.mp4",
     buffer_size=50,
     img_size=(480, 640),
     fps=30,

@@ -106,8 +106,6 @@ class InteractiveFramesWriter(FramesWriter):
 
     def write_frame(self, frame: cv2.typing.MatLike) -> bool:
         self.__frame_index += 1
-        if self.__frame_index < 530:
-            return True
         cv2.imshow("Median", InteractiveFramesWriter.__named_frame(frame, self.__frame_index))
         key = cv2.waitKey(0) & 0xFF
         if key == ord("q"):

@@ -75,11 +75,18 @@ Check out [demo.py](demo.py), for an example, how to run this software.
 
 Drawing bounding boxes
 
-https://github.com/user-attachments/assets/d8d999c4-5842-463a-8171-a7cb2316ab9c
+https://github.com/user-attachments/assets/b3860193-21a3-42cb-b6aa-275617ce21fd
 
 Drawing bounding boxes, blurring, and mark each frame with the action being performed (no movement, has movement, dector run, tracker run)
 
-https://github.com/user-attachments/assets/4ab4a660-7993-4ae2-86cc-35a836c3f5ec
+https://github.com/user-attachments/assets/6dbcf8b9-a47f-43bc-ab15-c0a55aa02be0
+
+Drawing biunding boxes, multiple people
+
+https://github.com/user-attachments/assets/eff81bf7-0bbf-4ad5-80f1-29125cdc6aa6
+
+
+
 
 
 

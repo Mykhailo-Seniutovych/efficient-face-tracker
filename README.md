@@ -44,7 +44,7 @@ To make the software accurate and at the same time efficient, there are 3 main s
   <div>
   <img src="./data/public/plot/detection.png" alt="Image" style="display: block;"/>
   <div/>
-  
+              
   Check out [detection-models-comparison.ipynb](experiments/face-detection/detection-models-comparison.ipynb) with
   choosing a detector
 - #### Face Tracking

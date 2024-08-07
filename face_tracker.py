@@ -83,7 +83,7 @@ def blur_bbox(frame: cv2.typing.MatLike, x1: int, y1: int, w: int, h: int):
     frame[y1 : y1 + h, x1 : x1 + w] = blurred
 
 
-def blur_and_draw(frame: cv2.typing.MatLike, x1: int, y1: int, w: int, h: int):
+def blur_and_draw_bbox(frame: cv2.typing.MatLike, x1: int, y1: int, w: int, h: int):
     blur_bbox(frame, x1, y1, w, h)
     draw_bbox(frame, x1, y1, w, h)
 

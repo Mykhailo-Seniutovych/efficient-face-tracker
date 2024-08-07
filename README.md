@@ -81,7 +81,7 @@ Drawing bounding boxes, blurring, and mark each frame with the action being perf
 
 https://github.com/user-attachments/assets/6dbcf8b9-a47f-43bc-ab15-c0a55aa02be0
 
-Drawing biunding boxes, multiple people
+Drawing bounding boxes, multiple people
 
 https://github.com/user-attachments/assets/eff81bf7-0bbf-4ad5-80f1-29125cdc6aa6
 

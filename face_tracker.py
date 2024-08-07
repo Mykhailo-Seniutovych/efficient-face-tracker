@@ -1,7 +1,4 @@
-import time
-import os
-from typing import Protocol
-from enum import Enum
+from typing import Callable
 from collections import deque
 from dataclasses import dataclass
 
@@ -73,11 +70,36 @@ class FrameAction:
     TRACKER_RUN = (255, 0, 0), " TRACK"
 
 
+def draw_bbox(frame: cv2.typing.MatLike, x1: int, y1: int, w: int, h: int):
+    cv2.rectangle(frame, (x1, y1), (x1 + w, y1 + h), (0, 255, 0), 2)
+
+
+def blur_bbox(frame: cv2.typing.MatLike, x1: int, y1: int, w: int, h: int):
+    if x1 < 0:
+        x1 = 0
+    if y1 < 0:
+        y1 = 0
+    blurred = cv2.GaussianBlur(frame[y1 : y1 + h, x1 : x1 + w], (41, 41), 3)
+    frame[y1 : y1 + h, x1 : x1 + w] = blurred
+
+
+def blur_and_draw(frame: cv2.typing.MatLike, x1: int, y1: int, w: int, h: int):
+    blur_bbox(frame, x1, y1, w, h)
+    draw_bbox(frame, x1, y1, w, h)
+
+
 class FaceTracker:
-    def __init__(self, cfg: Config, frames_reader: FramesReader, frames_writer: FramesWriter):
+    def __init__(
+        self,
+        cfg: Config,
+        frames_reader: FramesReader,
+        frames_writer: FramesWriter,
+        on_frame_detected_action: Callable[[cv2.typing.MatLike, int, int, int, int], None] = draw_bbox,
+    ):
         self.__cfg = cfg
         self.__frames_reader = frames_reader
         self.__frames_writer = frames_writer
+        self.__on_frame_detected_action = on_frame_detected_action
         self.__moving_frames_count = 0
         self.__has_movement = False
         self.__detector = face_detection.build_detector(
@@ -161,7 +183,7 @@ class FaceTracker:
             # the model sometimes falsely detects unrealistically large areas on fisheye camera images, we should filter them out
             if size_ratio > self.__cfg.min_frame_to_face_size_ratio:
                 result.append((x1, y1, x2, y2))
-                cv2.rectangle(output_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                self.__on_frame_detected_action(output_frame, x1, y1, x2 - x1, y2 - y1)
 
         self.__highlight_frame(output_frame, FrameAction.DETECTOR_RUN)
         return result
@@ -209,7 +231,7 @@ class FaceTracker:
                 index += 1
                 for face in frame_faces:
                     x, y, w, h = int(face[0]), int(face[1]), int(face[2]), int(face[3])
-                    cv2.rectangle(prev_frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                    self.__on_frame_detected_action(prev_frame, x, y, w, h)
 
                 self.__highlight_frame(prev_frame, FrameAction.TRACKER_RUN)
                 is_written = self.__frames_writer.write_frame(prev_frame)
@@ -249,7 +271,7 @@ class FaceTracker:
             if len(faces) > 0:
                 for face in faces:
                     x, y, w, h = int(face[0]), int(face[1]), int(face[2]), int(face[3])
-                    cv2.rectangle(output_frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                    self.__on_frame_detected_action(output_frame, x, y, w, h)
 
             self.__prev_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             is_written = self.__frames_writer.write_frame(output_frame)

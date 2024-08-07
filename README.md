@@ -29,7 +29,10 @@ To make the software accurate and at the same time efficient, there are 3 main s
   to reduce the noise and determines whether a given frame had movement or not.
   This step can run in less than **1 ms** per frame on a modern CPU, and can save a lot of computational power.
   This image visually shows how the difference between frames looks like:
+  <div>
   <img src="./data/public/plot/difference.png" alt="Image" width="500" style="display: block;"/>
+  <div/>
+
   Check out [motion-detection.ipynb](experiments/motion-detection/motion-detection.ipynb)
   for the experiments with choosing such motion detection algorithm.
 - #### Accurate Face Detection

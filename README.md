@@ -70,9 +70,11 @@ Check out [demo.py](demo.py), for an example, how to run this software.
 ## Result
 
 Drawing bounding boxes
+
 https://github.com/user-attachments/assets/d8d999c4-5842-463a-8171-a7cb2316ab9c
 
 Drawing bounding boxes, blurring, and mark each frame with the action being performed (no movement, has movement, dector run, tracker run)
+
 https://github.com/user-attachments/assets/4ab4a660-7993-4ae2-86cc-35a836c3f5ec
 
 

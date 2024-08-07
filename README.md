@@ -28,6 +28,8 @@ To make the software accurate and at the same time efficient, there are 3 main s
   To leverage this, the software calculates a difference of two consecutive frames, applies some basic filters,
   to reduce the noise and determines whether a given frame had movement or not.
   This step can run in less than **1 ms** per frame on a modern CPU, and can save a lot of computational power.
+  This image visually shows how the difference between frames looks like:
+  <img src="./data/public/plot/difference.png" alt="Image" width="500" style="display: block;"/>
   Check out [motion-detection.ipynb](experiments/motion-detection/motion-detection.ipynb)
   for the experiments with choosing such motion detection algorithm.
 - #### Accurate Face Detection
@@ -37,6 +39,8 @@ To make the software accurate and at the same time efficient, there are 3 main s
   this [repository](https://github.com/hukkelas/DSFD-Pytorch-Inference)
   The disadvantage of this detector is that is meant to run on GPU (around **70 ms** inference time on RTX 3090 GPU),
   the inference time on CPU is above 1 second, which is very slow.
+  This image shows the results of face detector:
+  <img src="./data/public/plot/detection.png" alt="Image" width="500" style="display: block;"/>
   Check out [detection-models-comparison.ipynb](experiments/face-detection/detection-models-comparison.ipynb) with
   choosing a detector
 - #### Face Tracking

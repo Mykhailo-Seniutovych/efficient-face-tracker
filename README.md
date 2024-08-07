@@ -68,7 +68,6 @@ The code base consist of mainly three pieces:
 Check out [demo.py](demo.py), for an example, how to run this software.
 
 ## Result
+https://github.com/user-attachments/assets/50cc9f4b-6922-48a5-bc20-cc4a8e48a12b
 
-<video width="640" height="360" controls>
-  <source src="https://raw.githubusercontent.com/johndoe/myproject/data/public/videos/video1-out.mp4" type="video/mp4">
-</video>
+https://github.com/user-attachments/assets/b7dc544d-e8db-4bd4-9e7e-7503540a9f04

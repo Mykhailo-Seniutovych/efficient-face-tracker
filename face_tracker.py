@@ -58,12 +58,19 @@ class Config:
     but also go back in time before previous detection was run to ensure that we did not miss any frames. 
     """
 
+    max_tracking_pixel_distance: int = 100
+    """
+    When face is tracked sometimes median flow can wrongly catch some random bbox on the image. 
+    This value is used for filtering such bound boxes.
+    When the distance between left top point of the previous and current bounding box is greater than this value, the bounding box will be excluded
+    """
 
-class FrameColors:
-    NO_MOVEMENT = (169, 169, 169)
-    HAS_MOVEMENT = (0, 255, 255)
-    DETECTOR_RUN = (0, 0, 255)
-    TRACKER_RUN = (255, 0, 0)
+
+class FrameAction:
+    NO_MOVEMENT = (169, 169, 169), "NO MOV"
+    HAS_MOVEMENT = (0, 255, 255), "   MOV"
+    DETECTOR_RUN = (0, 0, 255), "DETECT"
+    TRACKER_RUN = (255, 0, 0), " TRACK"
 
 
 class FaceTracker:
@@ -103,14 +110,14 @@ class FaceTracker:
 
             if self.__has_movement:
                 output_frame = frame.copy()
-                self.__highlight_frame(output_frame, FrameColors.HAS_MOVEMENT)
                 faces = self.__detect_faces(frame, output_frame)
                 success = self.__track_faces(frame, faces, output_frame)
+
                 self.__prev_gray = current_gray
                 if not success:
                     break
             else:
-                self.__highlight_frame(frame, FrameColors.NO_MOVEMENT)
+                self.__highlight_frame(frame, FrameAction.NO_MOVEMENT)
                 self.__prev_gray = current_gray
                 is_written = self.__frames_writer.write_frame(frame)
                 if not is_written:
@@ -140,6 +147,7 @@ class FaceTracker:
     ) -> list[tuple[int, int, int, int]]:
         should_run_detector = self.__frame_index % self.__cfg.detection_frequency == 0
         if not should_run_detector:
+            self.__highlight_frame(output_frame, FrameAction.HAS_MOVEMENT)
             return []
 
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -155,7 +163,7 @@ class FaceTracker:
                 result.append((x1, y1, x2, y2))
                 cv2.rectangle(output_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
-        self.__highlight_frame(output_frame, FrameColors.DETECTOR_RUN)
+        self.__highlight_frame(output_frame, FrameAction.DETECTOR_RUN)
         return result
 
     def __track_faces(
@@ -174,12 +182,11 @@ class FaceTracker:
 
         # backward track
         if self.__cfg.use_backward_tracking and not self.__prev_faces_tracked:
-            trackers = []
+            trackers: list[MedianFlowTracker] = []
             for face_bbox in detected_faces:
                 x1, y1, x2, y2 = face_bbox
                 x, y, w, h = (x1, y1, x2 - x1, y2 - y1)
-                tracker = cv2.legacy.TrackerMedianFlow_create()
-                tracker.init(frame, (x, y, w, h))
+                tracker = MedianFlowTracker(frame, (x, y, w, h))
                 trackers.append(tracker)
 
             offset = self.__frames_writer.seek_backward(self.__cfg.detection_frequency)
@@ -192,7 +199,7 @@ class FaceTracker:
                 tracked_faces.append([])
                 for tracker in trackers:
                     object_found, bbox = tracker.update(prev_frame)
-                    if object_found:
+                    if object_found and tracker.distance_moved() <= self.__cfg.max_tracking_pixel_distance:
                         tracked_faces[-1].append(bbox)
 
             assert len(tracked_faces) == len(prev_frames)
@@ -204,25 +211,24 @@ class FaceTracker:
                     x, y, w, h = int(face[0]), int(face[1]), int(face[2]), int(face[3])
                     cv2.rectangle(prev_frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
-                self.__highlight_frame(prev_frame, FrameColors.TRACKER_RUN)
+                self.__highlight_frame(prev_frame, FrameAction.TRACKER_RUN)
                 is_written = self.__frames_writer.write_frame(prev_frame)
                 assert is_written == True
 
             self.__prev_faces_tracked = True
 
             # currently detected frame
-            self.__highlight_frame(output_frame, FrameColors.DETECTOR_RUN)
+            self.__highlight_frame(output_frame, FrameAction.DETECTOR_RUN)
             is_written = self.__frames_writer.write_frame(output_frame)
             if not is_written:
                 return False
 
         # forward track
-        trackers = []
+        trackers: list[MedianFlowTracker] = []
         for face_bbox in detected_faces:
             x1, y1, x2, y2 = face_bbox
             x, y, w, h = (x1, y1, x2 - x1, y2 - y1)
-            tracker = cv2.legacy.TrackerMedianFlow_create()
-            tracker.init(frame, (x, y, w, h))
+            tracker = MedianFlowTracker(frame, (x, y, w, h))
             trackers.append(tracker)
 
         for _ in range(self.__cfg.detection_frequency - 1):
@@ -232,12 +238,12 @@ class FaceTracker:
             self.__frame_index += 1
 
             output_frame = frame.copy()
-            self.__highlight_frame(output_frame, FrameColors.TRACKER_RUN)
+            self.__highlight_frame(output_frame, FrameAction.TRACKER_RUN)
 
             faces = []
             for tracker in trackers:
                 object_found, bbox = tracker.update(frame)
-                if object_found:
+                if object_found and tracker.distance_moved() <= self.__cfg.max_tracking_pixel_distance:
                     faces.append(bbox)
 
             if len(faces) > 0:
@@ -252,6 +258,34 @@ class FaceTracker:
 
         return True
 
-    def __highlight_frame(self, frame_bgr: cv2.typing.MatLike, color: FrameColors):
+    def __highlight_frame(self, frame_bgr: cv2.typing.MatLike, action: FrameAction):
         if self.__cfg.action_highlight_enabled:
-            cv2.rectangle(frame_bgr, (0, 0), (self.__frame_width, self.__frame_height), color, 10)
+            cv2.rectangle(frame_bgr, (0, 0), (self.__frame_width, self.__frame_height), action[0], 10)
+            cv2.putText(
+                frame_bgr,
+                action[1],
+                (self.__frame_width - 90, 30),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.6,
+                action[0],
+                1,
+                cv2.LINE_AA,
+            )
+
+
+class MedianFlowTracker:
+    def __init__(self, frame: cv2.typing.MatLike, bbox: tuple[int, int, int, int]):
+        self.__tracker = cv2.legacy.TrackerMedianFlow_create()
+        self.__tracker.init(frame, bbox)
+        self.__prev_point = np.array([bbox[0], bbox[1]])
+        self.__distance_moved = 0
+
+    def update(self, frame: cv2.typing.MatLike) -> tuple[bool, tuple[int, int, int, int]]:
+        obj_found, bbox = self.__tracker.update(frame)
+        if obj_found:
+            curr_point = np.array([bbox[0], bbox[1]])
+            self.__distance_moved = np.linalg.norm(curr_point - self.__prev_point)
+        return (obj_found, bbox)
+
+    def distance_moved(self) -> float:
+        return self.__distance_moved

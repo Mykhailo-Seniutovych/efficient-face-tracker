@@ -40,7 +40,11 @@ To make the software accurate and at the same time efficient, there are 3 main s
   The disadvantage of this detector is that is meant to run on GPU (around **70 ms** inference time on RTX 3090 GPU),
   the inference time on CPU is above 1 second, which is very slow.
   This image shows the results of face detector:
+
+  <br/>
   <img src="./data/public/plot/detection.png" alt="Image" style="display: block;"/>
+  <br/>
+
   Check out [detection-models-comparison.ipynb](experiments/face-detection/detection-models-comparison.ipynb) with
   choosing a detector
 - #### Face Tracking

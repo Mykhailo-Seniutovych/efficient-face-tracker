@@ -38,7 +38,7 @@ To make the software accurate and at the same time efficient, there are 3 main s
 - #### Accurate Face Detection
   There a bunch of fast face detectors that have high inference time (for example, below 10 ms on modern CPU/GPU).
   However, they do not work well with low quality images, as the ones above.
-  That's why, a more accurate face detector was chosen, the one that worked wel is DSFD (Dual Shot Face Detector) from
+  That's why, a more accurate face detector was chosen, the one that worked well is DSFD (Dual Shot Face Detector) from
   this [repository](https://github.com/hukkelas/DSFD-Pytorch-Inference)
   The disadvantage of this detector is that is meant to run on GPU (around **70 ms** inference time on RTX 3090 GPU),
   the inference time on CPU is above 1 second, which is very slow.

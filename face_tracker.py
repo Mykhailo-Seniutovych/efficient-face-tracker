@@ -79,7 +79,7 @@ def blur_bbox(frame: cv2.typing.MatLike, x1: int, y1: int, w: int, h: int):
         x1 = 0
     if y1 < 0:
         y1 = 0
-    blurred = cv2.GaussianBlur(frame[y1 : y1 + h, x1 : x1 + w], (41, 41), 3)
+    blurred = cv2.GaussianBlur(frame[y1 : y1 + h, x1 : x1 + w], (71, 71), 0)
     frame[y1 : y1 + h, x1 : x1 + w] = blurred
 
 
@@ -87,6 +87,8 @@ def blur_and_draw_bbox(frame: cv2.typing.MatLike, x1: int, y1: int, w: int, h: i
     blur_bbox(frame, x1, y1, w, h)
     draw_bbox(frame, x1, y1, w, h)
 
+def do_nothing(frame: cv2.typing.MatLike, x1: int, y1: int, w: int, h: int):
+    pass
 
 class FaceTracker:
     def __init__(

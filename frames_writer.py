@@ -140,3 +140,14 @@ class InteractiveFramesWriter(FramesWriter):
             cv2.LINE_AA,
         )
         return named_frame
+
+
+class DummyFramesWriter(FramesWriter):
+    def write_frame(self, frame: cv2.typing.MatLike) -> bool:
+        return True
+
+    def flush_buffer(self):
+        pass
+
+    def seek_backward(self, frames_offset: int) -> int:
+        return frames_offset

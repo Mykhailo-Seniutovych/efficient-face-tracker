@@ -29,7 +29,7 @@ class ImageFilesFrameReader(FramesReader):
     def next_frame(self) -> tuple[bool, cv2.typing.MatLike]:
         frame = cv2.imread(f"{self.__images_dir}/{self.__current_frame_index}.jpg")
         self.__current_frame_index += 1
-        return True, frame
+        return frame is not None, frame
 
     def seek_backward(self, frames_offset: int):
         assert frames_offset >= 0
